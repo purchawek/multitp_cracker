@@ -9,23 +9,34 @@ class XorCracker:
     It allows to attack by specifying a char or by using auto
     """
     def __init__(self, ciphertexts):
-        self.dict_visible = ('abcdefghijklmnopqrstuvwxyz' +
-                             'ABCDEFGHIJKLMNOPQRSTUVWXYZ' +
-                             ' ?:,."#')
-        self._ciphertexts = ciphertexts._ctexts
-        self._key = {}
+        dict_visible = ('abcdefghijklmnopqrstuvwxyz' +
+                        'ABCDEFGHIJKLMNOPQRSTUVWXYZ' +
+                        ' ?:,."#')
+        self.dict_visible = [ord(x) for x in dict_visible]
+        self._ciphertexts = ciphertexts.ctexts
+        self._key = ciphertexts.key
         self._max_len = max([len(x) for x in self._ciphertexts])
         self._to_decrypt = list(range(self._max_len))
 
-    def _getkeychar(self, cindex, ccol, char):
-        return chr(ord(self._ciphertexts[cindex][ccol]) ^ ord(char))
+    def getkeychar(self, cindex, ccol, char):
+        """
+        Get value that xored with cindex[ccol] will give 'char'
+        in the plaintext. The result is possible value
+        for the key in this column.
+
+        Returns:
+            int: possible value for the key in the given column
+        """
+        return self._ciphertexts[cindex][ccol] ^ ord(char)
+
+    def setkeychar(self, col, char):
+        self._key[col] = char
 
     def _addifsolved(self, potentialkeychar, col):
-        for x in self._ciphertexts:
-            if col >= len(x):
+        for ciph in self._ciphertexts:
+            if col >= len(ciph):
                 continue
-            c = chr(ord(x[col]) ^ ord(potentialkeychar))
-            if c not in self.dict_visible:
+            if ciph[col] ^ potentialkeychar not in self.dict_visible:
                 return
         self._key[col] = potentialkeychar
         try:
@@ -35,7 +46,9 @@ class XorCracker:
 
     def getkey(self):
         """
-        Return:
+        Returns:
+            key (dict(int, int)) - dict key is column number
+                and the value is presumable value of the key
         """
         return self._key
 
@@ -49,5 +62,5 @@ class XorCracker:
         for i in range(len(self._ciphertexts)):
             for col in to_decrypt_copy:
                 if col < len(self._ciphertexts[i]):
-                    self._addifsolved(self._getkeychar(i, col, ' '), col)
+                    self._addifsolved(self.getkeychar(i, col, ' '), col)
         return self._key

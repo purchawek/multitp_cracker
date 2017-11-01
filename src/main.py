@@ -2,8 +2,10 @@
 Main module showing menu and stuff
 """
 import sys
+from utils import utils
 from xorcracker import XorCracker
 from ciphertexts import Ciphertexts
+from interactive import interactive
 
 def _say_hello():
     print(
@@ -20,50 +22,49 @@ def _show_help():
     print(
         """
 load <fname>   - load ciphertexts from "fname" file
+xor            - use xor attack on loaded ciphertexts
+interactive    - enter interactive mode
         """
     )
 
 
-def _prepare_deciphered(ciphertexts, key):
-    deciphered = []
-    for c in ciphertexts:
-        deciphered.append([])
-        last = deciphered[len(deciphered)-1]
-        for x in c:
-            last.append(x)
+def _handle_load(ciphertexts, cmd):
+    if len(cmd) < 2:
+        print("\"load\" requires filename")
+        return
+    fname = cmd[1]
+    try:
+        loaded_cnt = ciphertexts.load(fname)
+        if loaded_cnt:
+            print("Loaded {} ciphertexts".format(loaded_cnt))
+        else:
+            print("Couldn't load any ciphertexts. Check the format.")
+    except FileNotFoundError:
+        print("File {} does not exist".format(fname), file=sys.stderr)
 
-        for i in range(len(last)):
-            if i in key:
-                last[i] = chr(ord(last[i]) ^ ord(key[i]))
-            else:
-                last[i] = '#'
-    return deciphered
+
+@utils.for_loaded_only
+def _handle_xor(ciphertexts):
+    ciphertexts.key = XorCracker(ciphertexts).crack()
+    utils.show_deciphered(ciphertexts)
 
 
 def _handle_user_input(ciphertexts, cmd):
     if not cmd:
         return True
+    if cmd[0] == 'exit':
+        return False
 
     if cmd[0] == 'help':
         _show_help()
-    elif cmd[0] == 'load' and len(cmd) >= 2:
-        try:
-            loaded_cnt = ciphertexts.load(cmd[1])
-            if loaded_cnt:
-                print("Loaded {} ciphertexts".format(loaded_cnt))
-            else:
-                print("Couldn't load any ciphertexts. Check the format.")
-        except FileNotFoundError:
-            print("File {} does not exist".format(cmd[1]), file=sys.stderr)
+    elif cmd[0] == 'load':
+        _handle_load(ciphertexts, cmd)
     elif cmd[0] == 'xor':
-        if not ciphertexts.loaded():
-            print("You didn't load any ciphertexts. Try \"load\"")
-            return True
-        decrypted = _prepare_deciphered(ciphertexts._ctexts, XorCracker(ciphertexts).crack())
-        for d in decrypted:
-            print(''.join(d), end='\n\n')
-    elif cmd[0] == 'exit':
-        return False;
+        _handle_xor(ciphertexts)
+    elif cmd[0] == 'interactive':
+        interactive.run_interactive(ciphertexts)
+    else:
+        print("This command is not valid. Type \"help\" to get help.")
 
     return True
 

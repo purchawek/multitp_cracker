@@ -1,11 +1,14 @@
 
 class CiphersParser:
-
+    """
+    Simple class for parsing the ciphertexts into format required by
+    the library
+    """
     @staticmethod
     def parse_binary(line):
-        result = ""
+        result = []
         for word in line.split():
-            result += chr(int(word, 2))
+            result.append(int(word, 2))
         return result
 
     @staticmethod
@@ -14,8 +17,12 @@ class CiphersParser:
 
 
 class Ciphertexts:
+    """
+    Class packing all the data required to work with ciphertexts together
+    """
     def __init__(self):
-        self._ctexts = []
+        self.ctexts = []
+        self.key = {}
 
     def load(self, fname):
         """
@@ -28,9 +35,34 @@ class Ciphertexts:
                 CiphersParser.parse_binary(l.strip()) for l in c_file
                 if len(l.strip()) > 0
             ]
-            self._ctexts += loaded
+            self.ctexts += loaded
             return len(loaded)
         return 0
 
+    def size(self):
+        """
+        Returns number o ciphertexts
+        """
+        return len(self.ctexts)
+
     def loaded(self):
-        return len(self._ctexts) != 0
+        """
+        Returns:
+            bool: if there are any ciphertexts loaded
+        """
+        return self.size() != 0
+
+    def tostring(self, index):
+        """
+        Function that converts single cryptogram
+        to a plaintext with aqquired key.
+        """
+        if index < 0 or index >= len(self.ctexts):
+            return None
+
+        ctext = self.ctexts[index]
+        result = [chr(ctext[i] ^ self.key[i])
+                  if i in self.key
+                  else '#'
+                  for i in range(len(ctext))]
+        return ''.join(result)
